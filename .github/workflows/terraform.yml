@@ -1,0 +1,48 @@
+name: Terraform CI/CD (HCP Terraform)
+
+# 2nd version：state 和执行都交给 HCP Terraform 托管，
+# GitHub Actions 只负责触发，不再自己管 state 文件。
+on:
+  push:
+    branches:
+      - v2-hcp
+
+concurrency:
+  group: terraform
+  cancel-in-progress: false
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      # 用 API token 登录 HCP Terraform。
+      # 需要先在仓库里加一个 secret：TF_API_TOKEN
+      #   去 app.terraform.io → 右上角头像 → User settings → Tokens
+      #   → Create an API token，把值存进 GitHub 仓库的 secret
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan -input=false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # AWS Academy 用的是临时凭证，少了这个会报 InvalidClientTokenId
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+
+      # 这一版把「怎么销毁」的问题留给了 HCP 的界面：
+      # 可以在 workspace 里手动 queue destroy，但仍然没有进到代码仓库里
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
