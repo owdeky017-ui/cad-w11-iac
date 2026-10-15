@@ -22,8 +22,13 @@ jobs:
       uses: hashicorp/setup-terraform@v4
 
     # Initialize a new or existing Terraform working directory, loading the remote state
+    # 注意：用 S3 backend 时 init 阶段也要连 AWS，所以这一步同样需要凭证
     - name: Terraform Init
       run: terraform init
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
 
     # Tear down everything this stack created
     - name: Terraform Destroy
