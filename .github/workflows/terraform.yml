@@ -25,8 +25,13 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v4
 
+      # 注意：用 S3 backend 时 init 阶段也要连 AWS，所以这一步同样需要凭证
       - name: Terraform Init
         run: terraform init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
 
       - name: Terraform Plan
         run: terraform plan -input=false
