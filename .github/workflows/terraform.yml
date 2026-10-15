@@ -1,0 +1,48 @@
+name: Terraform CI/CD
+
+# 1st version（课件原版）：每次提交自动跑 init / plan / apply，
+# 不需要人去点按钮。
+on:
+  push:
+    branches:
+      - v1-push
+  pull_request:
+    branches:
+      - v1-push
+
+# 防止两次 push 并发跑，互相覆盖 state
+concurrency:
+  group: terraform
+  cancel-in-progress: false
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan -input=false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # AWS Academy 用的是临时凭证，少了这个会报 InvalidClientTokenId
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+
+      # 1st version 的两个缺陷，就在这一步上：
+      #   1. 没有出口 —— 建出来的资源没有任何自动销毁的手段
+      #   2. 每次提交都会 apply，改错一个字符也会直接改生产
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/v1-push'
+        run: terraform apply -auto-approve
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
