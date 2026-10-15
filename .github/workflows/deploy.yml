@@ -1,0 +1,43 @@
+name: Deploy app stack
+
+on:
+  workflow_dispatch:
+
+# 手动触发，但要防两个人同时点
+concurrency:
+  group: terraform
+  cancel-in-progress: false
+
+jobs:
+  plan_and_deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v7
+
+    # Install the latest version of Terraform CLI
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v4
+
+    # Initialize a new or existing Terraform working directory, loading the remote state
+    - name: Terraform Init
+      run: terraform init
+
+    # Generates an execution plan for Terraform
+    - name: Terraform Plan
+      run: terraform plan -input=false
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        # AWS Academy 用的是临时凭证，少了这个会报 InvalidClientTokenId
+        AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+
+    # Build or change infrastructure according to Terraform configuration files
+    - name: Terraform Apply
+      run: terraform apply -no-color -auto-approve
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
