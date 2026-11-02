@@ -76,6 +76,14 @@ resource "aws_instance" "sandbox" {
   }
 }
 
+# 4) Elastic IP：固定公网地址，实例 stop/start 后 IP 不变
+#    （不加这个的话，每次停机再启动 AWS 会重新分配一个公网 IP）
+resource "aws_eip" "server_eip" {
+  instance = aws_instance.sandbox.id
+  domain   = "vpc"
+}
+
 output "public_ip" {
-  value = aws_instance.sandbox.public_ip
+  value       = "http://${aws_eip.server_eip.public_ip}:80/"
+  description = "The public IP of your application"
 }
