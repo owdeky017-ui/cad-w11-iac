@@ -71,19 +71,29 @@ resource "aws_instance" "sandbox" {
   # Inject startup scripts
   user_data = file("user_data.tpl")
 
+  # user_data 改了要让实例重建一次，否则新脚本永远不会执行
+  user_data_replace_on_change = true
+
   tags = {
     Name = "sandbox"
   }
 }
 
-# 4) Elastic IP：固定公网地址，实例 stop/start 后 IP 不变
-#    （不加这个的话，每次停机再启动 AWS 会重新分配一个公网 IP）
-resource "aws_eip" "server_eip" {
-  instance = aws_instance.sandbox.id
-  domain   = "vpc"
+# 4) 弹性 IP：在控制台手工分配，并打上 tag name=my_eip
+#    Terraform 只负责“按标签查到它 + 绑定到实例”，不负责创建和释放
+data "aws_eip" "server_eip" {
+  filter {
+    name   = "tag:name"
+    values = ["my_eip"]
+  }
+}
+
+resource "aws_eip_association" "eip_assoc" {
+  instance_id   = aws_instance.sandbox.id
+  allocation_id = data.aws_eip.server_eip.id
 }
 
 output "public_ip" {
-  value       = "http://${aws_eip.server_eip.public_ip}:80/"
+  value       = "http://${aws_eip_association.eip_assoc.public_ip}:80/"
   description = "The public IP of your application"
 }
