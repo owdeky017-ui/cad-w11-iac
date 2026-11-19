@@ -25,7 +25,7 @@ data "aws_ssm_parameter" "ubuntu" {
 }
 
 # 2) Set up inbound connections: app port (HTTP) + 22 (SSH, 给 EC2 Instance Connect 用)
-resource "aws_security_group" "server_sg" {
+resource "aws_security_group" "server_allow_http" {
   name        = "server-allow-http"
   description = "Allow HTTP and SSH inbound"
 
@@ -70,7 +70,7 @@ resource "aws_instance" "sandbox" {
 
   # Add security group: 自己的 + RDS 的那个（RDS 的 SG 允许同组成员访问 5432）
   vpc_security_group_ids = [
-    aws_security_group.server_sg.id,
+    aws_security_group.server_allow_http.id,
     data.aws_db_instance.rds_database.vpc_security_groups[0]
   ]
 
